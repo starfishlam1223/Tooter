@@ -1,0 +1,193 @@
+{% extends "./base.html" %}
+
+{% block title %}
+Tooter
+{% endblock title %}
+
+{% block content %}
+<div class="row text-center">
+	<div class="col">
+		<h1>Welcome to Tooter!</h1>
+	</div>
+</div>
+
+<div class="row">
+	<div class="col-10 col-md-4 mx-auto">
+		<form class="form" id="toot-create-form" method="POST" action="api/toots/create/">
+			{% csrf_token %}
+			<div class="d-none alert alert-danger" id="toot-create-error"></div>
+			<input type="hidden" value="/" name="next">
+			<textarea required class="form-control" name="content" placeholder="What is your toot today?"></textarea>
+
+			<button type="submit" class="btn btn-secondary">Toot</button>
+		</form>
+	</div>
+</div>
+
+<div id="tooter">
+</div>
+
+<div class="row" id="toots">
+	<div class="col">
+		<p>Loading...</p>
+	</div>
+</div>
+
+<script>
+	function loadToots(tootsElem) {
+		const xhr = new XMLHttpRequest()
+		const method = "GET"
+		const url = "api/toots/"
+		const responseType = "json"
+
+		xhr.responseType = responseType
+		xhr.open(method, url)
+		xhr.onload = function () {
+			const serverResponse = xhr.response
+			const listedItems = serverResponse
+			var tootsElemHtml = ""
+			listedItems.forEach(function (elem) {
+				tootsElemHtml += tootFormat(elem)
+			})
+			tootsElem.innerHTML = tootsElemHtml
+		}
+		xhr.send()
+	}
+
+	function getCookie(name) {
+		let cookieValue = null;
+		if (document.cookie && document.cookie !== '') {
+			const cookies = document.cookie.split(';');
+			for (let i = 0; i < cookies.length; i++) {
+				const cookie = cookies[i].trim();
+				// Does this cookie string begin with the name we want?
+				if (cookie.substring(0, name.length + 1) === (name + '=')) {
+					cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+					break;
+				}
+			}
+		}
+		return cookieValue;
+	}
+
+	function actionHandler(id, action) {
+		const csrftoken = getCookie('csrftoken');
+		const url = "/api/toots/action/"
+		const method = "POST"
+		const data = JSON.stringify({
+			id: id,
+			action: action
+		})
+		const xhr = new XMLHttpRequest()
+		xhr.open(method, url)
+		xhr.setRequestHeader("Content-Type", "application/json")
+		xhr.setRequestHeader("HTTP_X_REQUESTED_WITH", "XMLHttpRequest")
+		xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest")
+		xhr.setRequestHeader("X-CSRFToken", csrftoken)
+
+		xhr.onload = function () {
+			loadToots(tootsDiv)
+		}
+		xhr.send(data)
+	}
+
+	function likeBtn(toot) {
+		return `
+			<button class="btn btn-primary btn-sm" onclick=actionHandler(` + toot.id + `,"like")>
+				` + toot.likeCount + ` Likes
+			</button>`
+	}
+
+	function unlikeBtn(toot) {
+		return `
+			<button class="btn btn-outline-primary btn-sm" onclick=actionHandler(` + toot.id + `,"unlike")>
+				Unlike
+			</button>`
+	}
+
+	function retootBtn(toot) {
+		return `
+			<button class="btn btn-outline-success btn-sm" onclick=actionHandler(` + toot.id + `,"retoot")>
+				Retoot
+			</button>`
+	}
+
+	function tootFormat(toot) {
+		return `
+			<div class="col-12 col-md-10 border rounded py-4 mb-4 mx-auto" id=toot-"` + toot.id + `">
+				<p>` + toot.content + `</p>
+				<div class="btn-group">` +
+			likeBtn(toot) +
+			unlikeBtn(toot) +
+			retootBtn(toot) + `
+				</div>
+			</div>
+		`
+	}
+
+	function tootSubmitErrorHandler(msg, display) {
+		const errorMsgDiv = document.getElementById("toot-create-error")
+
+		if (display == true) {
+			errorMsgDiv.innerText = msg
+			errorMsgDiv.setAttribute("class", "d-block alert alert-danger")
+		} else {
+			errorMsgDiv.innerText = ""
+			errorMsgDiv.setAttribute("class", "d-none alert alert-danger")
+		}
+
+	}
+
+	function tootSubmitHandler(event) {
+		event.preventDefault()
+
+		const form = event.target
+		const formData = new FormData(form)
+		const url = form.getAttribute("action")
+		const method = form.getAttribute("method")
+		const xhr = new XMLHttpRequest()
+
+		xhr.open(method, url)
+		xhr.setRequestHeader("HTTP_X_REQUESTED_WITH", "XMLHttpRequest")
+		xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest")
+		xhr.onload = function () {
+			if (xhr.status === 201) {
+				tootSubmitErrorHandler(null, false)
+
+				const newToot = JSON.parse(xhr.response)
+				const newTootElem = tootFormat(newToot)
+
+				tootsDiv.innerHTML = newTootElem + tootsDiv.innerHTML;
+			} else if (xhr.status === 400) {
+				const errorJson = JSON.parse(xhr.response)
+				if (errorJson.content) {
+					tootSubmitErrorHandler(errorJson.content[0], true)
+				} else {
+					tootSubmitErrorHandler("An error has occured. Please try again!", true)
+				}
+			} else if (xhr.status === 401) {
+				alert("You have not logined! Which elephant is you?")
+				window.lcoation.href = "/login/"
+			} else if (xhr.status === 403) {
+				alert("You have not logined! Which elephant is you?")
+				window.lcoation.href = "/login/"
+			} else if (xhr.status === 500) {
+				alert("Hmm... Something is wrong with the Tooter server. Please try again!")
+			}
+
+			form.reset()
+		}
+		xhr.onerror = function () {
+			alert("Something is wrong with Tooter!")
+		}
+		xhr.send(formData)
+	}
+
+	const tootsDiv = document.getElementById("toots")
+	loadToots(tootsDiv)
+
+	const tootsCreateForm = document.getElementById("toot-create-form")
+	tootsCreateForm.addEventListener("submit", tootSubmitHandler)
+
+</script>
+{% endblock content %}
