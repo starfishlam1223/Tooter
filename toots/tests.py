@@ -62,11 +62,21 @@ class TootTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()), 4)
 
+    def test_related_name(self):
+        user = self.user
+        self.assertEqual(user.toots.count(), 2)
+
     def test_action_like(self):
         client = self.get_client()
         response = client.post("/api/toots/action/", {"id": 1, "action": "like"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json().get("likeCount"), 1)
+        user = self.user
+        liked_toots = user.tootlike_set.count()
+        self.assertEqual(liked_toots, 1)
+        liked_toots = user.liked_toots.count()
+        self.assertEqual(liked_toots, 1)
+
 
     def test_action_unlike(self):
         client = self.get_client()
@@ -79,6 +89,6 @@ class TootTestCase(TestCase):
     def test_action_retoot(self):
         client = self.get_client()
         response = client.post("/api/toots/action/", {"id": 1, "action": "retoot"})
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json().get("id"), 5)
         self.assertEqual(response.json().get("parent").get("id"), 1)

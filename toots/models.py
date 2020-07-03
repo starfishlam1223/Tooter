@@ -11,11 +11,11 @@ class TootLike(models.Model):
 # Create your models here.
 class Toot(models.Model):
     # id = models.AutoField(primary_key=true)
-    user = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
-    parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL)
+    user = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name="toots")
+    parent = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="children")
     content = models.TextField(blank=True, null=True)
     image = models.FileField(upload_to="images/", blank=True, null=True)
-    likes = models.ManyToManyField(User, related_name="liked_user", blank=True, through=TootLike)
+    likes = models.ManyToManyField(User, related_name="liked_toots", blank=True, through=TootLike)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
