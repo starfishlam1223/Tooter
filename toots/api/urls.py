@@ -20,11 +20,13 @@ from .views import (
     api_toot_delete_view,
     api_toot_detail_view,
     api_toot_list_view,
+    api_toot_feed_view,
     api_toot_create_view,
 )
 
 urlpatterns = [
     path("", api_toot_list_view),
+    path("feed/", api_toot_feed_view),
     path("action/", api_toot_action_view),
     path("create/", api_toot_create_view),
     path("delete/<int:toot_id>/", api_toot_delete_view),

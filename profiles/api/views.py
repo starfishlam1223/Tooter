@@ -25,6 +25,9 @@ def api_user_follow_view(request, username, *args, **kwargs):
     follower = request.user
     followee_qs = User.objects.filter(username=username)
 
+    if follower.username == username:
+        return Response({"count": follower.profile.followers.all().count()}, status=200)
+
     if not followee_qs.exists():
         return Response({}, status=400)
 

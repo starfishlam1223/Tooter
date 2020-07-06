@@ -5,6 +5,7 @@ from django.http import Http404, HttpResponse, JsonResponse
 from django.utils.http import is_safe_url
 
 from rest_framework.authentication import SessionAuthentication
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import (
     api_view,
@@ -30,6 +31,12 @@ def api_toot_create_view(request, *args, **kwargs):
 
     return Response({}, status=400)
 
+def get_paginated_quesryset_response(qs, request):
+    paginator = PageNumberPagination()
+    paginator.page_size = 20
+    paginator_qs = paginator.paginate_queryset(qs, request)
+    serializer = TootSerializer(paginator_qs, many=True)
+    return paginator.get_paginated_response(serializer.data)
 
 @api_view(["GET"])
 def api_toot_list_view(request, *args, **kwargs):
@@ -37,9 +44,14 @@ def api_toot_list_view(request, *args, **kwargs):
     username = request.GET.get("username")
     if username != None:
         qs = qs.filter(user__username__iexact=username)
-    serializer = TootSerializer(qs, many=True)
-    return Response(serializer.data, status=200)
+    return get_paginated_quesryset_response(qs, request)
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def api_toot_feed_view(request, *args, **kwargs):
+    user = request.user
+    qs = Toot.objects.feed(user)
+    return get_paginated_quesryset_response(qs, request)
 
 @api_view(["GET"])
 def api_toot_detail_view(request, toot_id, *args, **kwargs):
